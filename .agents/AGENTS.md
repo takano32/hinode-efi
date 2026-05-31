@@ -234,10 +234,8 @@ Not run: cargo build, QEMU
 Do not claim a build, QEMU run, KVM run, or GitHub Actions run succeeded unless
 it was actually executed.
 
-## Current caveat
+## Verified state
 
-The repository files are intended to be internally consistent, but this generated
-project has not yet been proven by an actual `cargo build` or QEMU run in this
-environment.
-
-Do not remove this caveat until those commands have actually succeeded.
+`cargo build`, `cargo clippy`, and `./scripts/qemu-smoke.sh` have all passed
+on this repository. The QEMU smoke test ran under TCG emulation on an AArch64
+host using firmware extracted from the Debian `qemu-efi-aarch64` package.

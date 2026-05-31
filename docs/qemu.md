@@ -16,8 +16,35 @@ sudo apt install qemu-system-arm qemu-efi-aarch64
 
 ### Arch Linux
 
+Install QEMU:
+
 ```sh
-sudo pacman -S qemu-system-aarch64 edk2-aarch64
+sudo pacman -S qemu-system-aarch64
+```
+
+`edk2-aarch64` is not in the official Arch repositories. The firmware can be
+extracted from the Debian package:
+
+```sh
+mkdir -p /tmp/edk2-fw && cd /tmp/edk2-fw
+curl -sL "https://ftp.debian.org/debian/pool/main/e/edk2/qemu-efi-aarch64_2025.02-9_all.deb" \
+  -o qemu-efi-aarch64.deb
+ar x qemu-efi-aarch64.deb
+bsdtar -xf data.tar.xz
+# firmware is at: ./usr/share/qemu-efi-aarch64/QEMU_EFI.fd
+```
+
+Then run with:
+
+```sh
+QEMU_EFI=/tmp/edk2-fw/usr/share/qemu-efi-aarch64/QEMU_EFI.fd \
+  ./scripts/run-qemu-aarch64.sh --release
+```
+
+Alternatively, build `edk2-armvirt-git` from the AUR (takes time):
+
+```sh
+paru -S edk2-armvirt-git
 ```
 
 ## Run manually

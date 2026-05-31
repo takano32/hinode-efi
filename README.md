@@ -18,14 +18,25 @@ environment, but the goal is to support AArch64 UEFI systems more broadly.
 
 ## Current status
 
-This project is experimental.
+The initial boot path is proven.
 
-The initial focus is simple:
+At startup, `hinode-efi` prints:
 
-- build a minimal `.efi` binary
-- run on AArch64 UEFI firmware
-- print basic output through UEFI services
-- provide a base for later boot-time experiments
+```text
+hinode-efi
+A generic Rust-based UEFI project for AArch64 systems.
+Target: aarch64-unknown-uefi
+
+Firmware vendor:   <vendor string>
+Firmware revision: <hex>
+UEFI revision:     <major.minor>
+
+Memory map entries: <n>
+Total memory:       <N> MiB (<pages> pages)
+```
+
+This has been verified with `cargo build`, `cargo clippy`, and a QEMU TCG
+smoke test (`./scripts/qemu-smoke.sh`).
 
 ## Target
 

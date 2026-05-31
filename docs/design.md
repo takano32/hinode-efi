@@ -9,10 +9,10 @@ only when it is explicitly named and isolated.
 
 ## Initial milestones
 
-1. Build a minimal `hinode.efi` binary.
-2. Print basic output through UEFI console services.
-3. Inspect basic firmware/system information.
-4. Inspect the UEFI memory map.
+1. ✓ Build a minimal `hinode.efi` binary.
+2. ✓ Print basic output through UEFI console services.
+3. ✓ Inspect basic firmware/system information.
+4. ✓ Inspect the UEFI memory map.
 5. Experiment with loading external payloads.
 6. Keep AArch64 as the primary target while avoiding device-specific lock-in.
 
