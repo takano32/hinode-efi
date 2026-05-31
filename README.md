@@ -1,227 +1,273 @@
 # hinode-efi
 
-A generic Rust-based UEFI project for AArch64 systems.
+A generic Rust-based UEFI application for AArch64 systems.
 
-`hinode-efi` is an experimental UEFI project written in Rust. It targets
-AArch64 UEFI environments and starts from a small, readable EFI application.
+`hinode-efi` boots on AArch64 UEFI firmware, prints system information
+through UEFI console services, and returns control to the firmware.
+It is written in Rust with `#![no_std]` and `#![no_main]`.
 
-The name **Hinode** means "sunrise" in Japanese: the quiet moment before the
-system wakes.
+The name **Hinode** (日の出) means "sunrise" in Japanese.
 
-## Scope
+## What it does
 
-`hinode-efi` is designed as a generic AArch64 UEFI project.
-
-Although the name was inspired by the Asahi ecosystem, this project is **not**
-limited to Asahi Linux or Apple Silicon. Asahi Linux may be one useful test
-environment, but the goal is to support AArch64 UEFI systems more broadly.
-
-## Current status
-
-The initial boot path is proven.
-
-At startup, `hinode-efi` prints:
+On each boot, `hinode-efi` outputs:
 
 ```text
 hinode-efi
 A generic Rust-based UEFI project for AArch64 systems.
 Target: aarch64-unknown-uefi
 
-Firmware vendor:   <vendor string>
-Firmware revision: <hex>
-UEFI revision:     <major.minor>
+Firmware vendor:   Debian distribution of EDK II
+Firmware revision: 0x00010000
+UEFI revision:     2.7
 
-Memory map entries: <n>
-Total memory:       <N> MiB (<pages> pages)
+Memory map entries: 80
+Total memory:       576 MiB (147457 pages)
 ```
 
-This has been verified with `cargo build`, `cargo clippy`, and a QEMU TCG
-smoke test (`./scripts/qemu-smoke.sh`).
+This has been verified by building and running under QEMU TCG emulation on
+an AArch64 host.
 
-## Target
+## Scope
 
-The primary Rust target is:
+The project is intentionally generic. It avoids assumptions that tie it to
+any particular board, vendor, or Linux distribution. Asahi Linux may serve
+as a useful reference environment, but it is not a requirement.
 
-```text
-aarch64-unknown-uefi
-```
+## Prerequisites
 
-The expected EFI binary is:
+- Rust (stable toolchain)
+- `aarch64-unknown-uefi` target
 
-```text
-hinode.efi
-```
-
-For default AArch64 removable-media boot, copy or rename it to:
-
-```text
-EFI/BOOT/BOOTAA64.EFI
-```
-
-## Repository layout
-
-```text
-.
-├── .agents
-│   ├── AGENTS.md
-│   ├── README.md
-│   ├── SKILL.md
-│   ├── agent-collaboration
-│   │   └── SKILL.md
-│   ├── hinode-efi
-│   │   └── SKILL.md
-│   ├── qemu-ci
-│   │   └── SKILL.md
-│   └── rust-uefi
-│       └── SKILL.md
-├── .github
-│   ├── dependabot.yml
-│   └── workflows
-│       └── ci.yml
-├── .gitignore
-├── AGENTS.md
-├── CLAUDE.md
-├── Cargo.toml
-├── README.md
-├── SKILL.md
-├── docs
-│   ├── asahi.md
-│   ├── design.md
-│   └── qemu.md
-├── scripts
-│   ├── qemu-smoke.sh
-│   └── run-qemu-aarch64.sh
-└── src
-    └── main.rs
+```sh
+rustup target add aarch64-unknown-uefi
+rustup component add rustfmt clippy
 ```
 
 ## Build
 
-Install the Rust target:
-
 ```sh
-rustup target add aarch64-unknown-uefi
-```
-
-Build:
-
-```sh
+# debug
 cargo build --target aarch64-unknown-uefi
-```
 
-Release build:
-
-```sh
+# release
 cargo build --release --target aarch64-unknown-uefi
 ```
 
-Expected outputs:
+Output binaries:
 
 ```text
 target/aarch64-unknown-uefi/debug/hinode.efi
 target/aarch64-unknown-uefi/release/hinode.efi
 ```
 
+## Code quality
+
+```sh
+cargo fmt --all -- --check
+cargo clippy --target aarch64-unknown-uefi -- -D warnings
+```
+
 ## Run with QEMU
 
-The QEMU helper scripts are kept because CI uses them for the smoke test.
+### Prerequisites
+
+**Ubuntu / Debian:**
+
+```sh
+sudo apt install qemu-system-arm qemu-efi-aarch64
+```
+
+**Arch Linux:**
+
+`edk2-aarch64` is not in the official repositories. Extract the firmware
+from the Debian package instead:
+
+```sh
+mkdir -p /tmp/edk2-fw && cd /tmp/edk2-fw
+curl -sL "https://ftp.debian.org/debian/pool/main/e/edk2/qemu-efi-aarch64_2025.02-9_all.deb" \
+  -o qemu-efi-aarch64.deb
+ar x qemu-efi-aarch64.deb
+bsdtar -xf data.tar.xz
+# firmware: ./usr/share/qemu-efi-aarch64/QEMU_EFI.fd
+```
+
+Then set the environment variable:
+
+```sh
+export QEMU_EFI=/tmp/edk2-fw/usr/share/qemu-efi-aarch64/QEMU_EFI.fd
+```
+
+Alternatively, build from the AUR (takes longer):
+
+```sh
+paru -S edk2-armvirt-git
+```
+
+### Manual run
+
+```sh
+./scripts/run-qemu-aarch64.sh --release
+```
+
+The script builds the release binary, copies it to `esp/EFI/BOOT/BOOTAA64.EFI`,
+and launches QEMU. Serial output appears in the terminal.
+
+On AArch64 hosts with `/dev/kvm`, KVM acceleration is used automatically.
+On x86_64 hosts or when KVM is unavailable, QEMU TCG emulation is used.
+
+### Smoke test
 
 ```sh
 ./scripts/qemu-smoke.sh
 ```
 
-See [docs/qemu.md](docs/qemu.md) for package names and firmware path notes.
+Runs QEMU with a 20-second timeout and exits 0 if `hinode-efi` appears in
+the serial output. This is the same check run by CI.
 
-## Agent guidance
-
-All detailed agent guidance lives under:
-
-```text
-.agents/
-```
-
-Root-level files are only import shims:
+Example output:
 
 ```text
-AGENTS.md
-CLAUDE.md
-SKILL.md
+UEFI firmware (version 2025.02-9 built at 20:16:19 on Sep  1 2025)
+BdsDxe: loading Boot0002 "UEFI Misc Device 2" ...
+hinode-efi
+A generic Rust-based UEFI project for AArch64 systems.
+Target: aarch64-unknown-uefi
+
+Firmware vendor:   Debian distribution of EDK II
+Firmware revision: 0x00010000
+UEFI revision:     2.7
+
+Memory map entries: 80
+Total memory:       576 MiB (147457 pages)
+[ INFO]:  src/main.rs@038: hinode-efi: boot complete
 ```
 
-The canonical agent instruction body is:
+## Deploying to real hardware
+
+Copy the release binary to the EFI system partition:
+
+```sh
+cp target/aarch64-unknown-uefi/release/hinode.efi \
+   /boot/efi/EFI/BOOT/BOOTAA64.EFI
+```
+
+The application will run once at boot and return to the UEFI shell or
+firmware menu.
+
+## Continuous integration
+
+One workflow: `.github/workflows/ci.yml`
+
+Triggers: push to `main`/`master`, pull request, manual dispatch.
+
+| Step | Command |
+|------|---------|
+| Formatting check | `cargo fmt --all -- --check` |
+| Clippy | `cargo clippy --target aarch64-unknown-uefi -- -D warnings` |
+| Debug build | `cargo build --target aarch64-unknown-uefi` |
+| Release build | `cargo build --release --target aarch64-unknown-uefi` |
+| Smoke test | `bash ./scripts/qemu-smoke.sh` |
+
+CI runs on `ubuntu-24.04` with `qemu-system-arm` and `qemu-efi-aarch64`
+installed via apt.
+
+## Repository layout
 
 ```text
-.agents/AGENTS.md
+.
+├── .agents/                  # Agent/AI collaboration instructions
+│   ├── AGENTS.md             # Canonical agent instruction body
+│   ├── SKILL.md              # Shared skill index
+│   ├── agent-collaboration/
+│   ├── hinode-efi/
+│   ├── qemu-ci/
+│   └── rust-uefi/
+├── .github/
+│   ├── dependabot.yml
+│   └── workflows/
+│       └── ci.yml
+├── .gitignore
+├── AGENTS.md                 # Import shim → .agents/AGENTS.md
+├── CLAUDE.md                 # Import shim → .agents/AGENTS.md
+├── Cargo.lock
+├── Cargo.toml
+├── README.md
+├── SKILL.md                  # Import shim → .agents/SKILL.md
+├── docs/
+│   ├── asahi.md              # Relationship to Asahi Linux
+│   ├── design.md             # Design notes and milestones
+│   └── qemu.md               # QEMU setup and firmware notes
+├── scripts/
+│   ├── qemu-smoke.sh         # CI smoke test script
+│   └── run-qemu-aarch64.sh   # Manual QEMU launch script
+└── src/
+    └── main.rs               # UEFI entry point
 ```
 
-The shared skill index is:
+## Source overview
 
-```text
-.agents/SKILL.md
+`src/main.rs` is the entire application:
+
+```rust
+#![no_main]
+#![no_std]
+
+use log::info;
+use uefi::boot;
+use uefi::mem::memory_map::{MemoryMap, MemoryType};
+use uefi::prelude::*;
+
+#[entry]
+fn main() -> Status {
+    uefi::helpers::init().unwrap();
+    // print banner, firmware info, memory map
+    Status::SUCCESS
+}
 ```
 
-Focused supporting skills are split under:
+Key points:
 
-```text
-.agents/hinode-efi/SKILL.md
-.agents/rust-uefi/SKILL.md
-.agents/qemu-ci/SKILL.md
-.agents/agent-collaboration/SKILL.md
-```
+- `#![no_std]` — no Rust standard library
+- `#![no_main]` — entry point provided by `uefi::entry` macro
+- `uefi::helpers::init()` — sets up allocator, logger, and panic handler
+- `uefi::system::*` — reads firmware vendor and UEFI revision
+- `uefi::boot::memory_map()` — reads the UEFI memory map
+- Returns `Status::SUCCESS` — hands control back to firmware
 
-## GitHub Actions
+## Dependencies
 
-There is one workflow:
-
-```text
-.github/workflows/ci.yml
-```
-
-It runs on:
-
-- push to `main` or `master`
-- pull request
-- manual `workflow_dispatch`
-
-The workflow has two jobs:
-
-1. build the AArch64 UEFI binary
-2. boot the release binary with QEMU and check that the output contains
-   `hinode-efi`
+| Crate | Version | Purpose |
+|-------|---------|---------|
+| `uefi` | 0.37 | UEFI services, types, and macros |
+| `log` | 0.4 | Logging facade (backed by uefi logger) |
 
 ## Design principles
 
-### Generic first
+**Generic first** — no board-specific or distro-specific assumptions in
+the core code.
 
-The project should avoid assumptions that only apply to one device family or
-Linux distribution.
+**Small core** — the entry point stays compact and readable. Abstractions
+are added only when the minimal path is proven.
 
-### Small core
+**Explicit boot-time behavior** — what happens at boot is visible in the
+source, not hidden behind layers.
 
-The initial code should stay compact and understandable.
-
-### Explicit platform behavior
-
-When platform-specific behavior is needed, it should be named clearly rather
-than hidden behind generic-looking code.
+**Verified, not assumed** — firmware behavior is checked at runtime, not
+taken for granted.
 
 ## Relationship to Asahi Linux
 
-The name `hinode` was inspired by the word `asahi`, meaning "morning sun" or
-"rising sun".
-
-However, `hinode-efi` is not an Asahi Linux project and is not intended to be
-Apple Silicon-only. The broader target is generic AArch64 UEFI.
+The name `hinode` was inspired by `asahi` (朝日, "morning sun"). This
+project is not part of Asahi Linux and is not Apple Silicon-only.
+The intended scope is generic AArch64 UEFI.
 
 ## Non-goals
 
-At least for now, `hinode-efi` is not intended to be:
-
-- a full operating system
-- a full firmware implementation
-- a replacement for UEFI firmware
-- a production-ready secure boot solution
-- tied to a single AArch64 board or vendor
+- Full operating system
+- Full firmware replacement
+- Production secure boot solution
+- Lock-in to a specific AArch64 board or vendor
 
 ## License
 
