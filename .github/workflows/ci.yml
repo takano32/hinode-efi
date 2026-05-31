@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_TARGET: aarch64-unknown-uefi
+
+jobs:
+  build:
+    name: Build AArch64 UEFI
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Rust toolchain
+        run: |
+          rustup --version
+          rustc --version
+          cargo --version
+
+      - name: Install Rust target and components
+        run: |
+          rustup target add "${RUST_TARGET}"
+          rustup component add rustfmt clippy
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy
+        run: cargo clippy --target "${RUST_TARGET}" -- -D warnings
+
+      - name: Build debug EFI binary
+        run: cargo build --target "${RUST_TARGET}"
+
+      - name: Build release EFI binary
+        run: cargo build --release --target "${RUST_TARGET}"
+
+      - name: Verify release artifact exists
+        run: |
+          test -f "target/${RUST_TARGET}/release/hinode.efi"
+          ls -lh "target/${RUST_TARGET}/release/hinode.efi"
+          file "target/${RUST_TARGET}/release/hinode.efi" || true
+
+  qemu-smoke:
+    name: Run AArch64 UEFI smoke test
+    runs-on: ubuntu-24.04
+    needs: build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust target
+        run: rustup target add "${RUST_TARGET}"
+
+      - name: Install QEMU and AArch64 UEFI firmware
+        run: |
+          sudo apt update
+          sudo apt install -y qemu-system-arm qemu-efi-aarch64
+
+      - name: Run QEMU smoke test
+        run: bash ./scripts/qemu-smoke.sh
