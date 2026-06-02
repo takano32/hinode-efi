@@ -87,7 +87,7 @@ fn boot_ubuntu_live_server() -> uefi::Result {
 
     let mut kernel_image = boot::open_protocol_exclusive::<LoadedImage>(kernel_handle)?;
     let cmdline = cstr16!(
-        "BOOT_IMAGE=/casper/vmlinuz console=ttyS0,115200n8 console=tty0 efi=noruntime systemd.mask=serial-getty@ttyAMA0.service --- console=tty0"
+        "efi=noruntime fsck.mode=skip systemd.mask=serial-getty@ttyAMA0.service systemd.mask=casper-md5check.service --- console=tty0"
     );
     unsafe {
         kernel_image.set_load_options(
