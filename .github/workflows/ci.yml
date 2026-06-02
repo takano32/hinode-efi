@@ -68,7 +68,7 @@ jobs:
       - name: Install QEMU and AArch64 UEFI firmware
         run: |
           sudo apt update
-          sudo apt install -y qemu-system-arm qemu-efi-aarch64
+          sudo apt install -y qemu-system-arm qemu-efi-aarch64 dosfstools mtools
 
       - name: Run QEMU smoke test
         run: bash ./scripts/qemu-smoke.sh

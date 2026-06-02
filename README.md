@@ -38,6 +38,7 @@ as a useful reference environment, but it is not a requirement.
 
 - Rust (stable toolchain)
 - `aarch64-unknown-uefi` target
+- QEMU, AArch64 UEFI firmware, `dosfstools`, and `mtools` for local smoke tests
 
 ```sh
 rustup target add aarch64-unknown-uefi
@@ -75,7 +76,7 @@ cargo clippy --target aarch64-unknown-uefi -- -D warnings
 **Ubuntu / Debian:**
 
 ```sh
-sudo apt install qemu-system-arm qemu-efi-aarch64
+sudo apt install qemu-system-arm qemu-efi-aarch64 dosfstools mtools
 ```
 
 **Arch Linux:**
@@ -111,7 +112,7 @@ paru -S edk2-armvirt-git
 ```
 
 The script builds the release binary, copies it to `esp/EFI/BOOT/BOOTAA64.EFI`,
-and launches QEMU. Serial output appears in the terminal.
+creates `esp.img`, and launches QEMU. Serial output appears in the terminal.
 
 On AArch64 hosts with `/dev/kvm`, KVM acceleration is used automatically.
 On x86_64 hosts or when KVM is unavailable, QEMU TCG emulation is used.

@@ -16,6 +16,7 @@ fi
 
 EFI_BIN="target/${TARGET}/${MODE}/hinode.efi"
 ESP_DIR="${ESP_DIR:-esp}"
+ESP_IMG="${ESP_IMG:-${ESP_DIR}.img}"
 QEMU="${QEMU:-qemu-system-aarch64}"
 
 if ! command -v "$QEMU" >/dev/null 2>&1; then
@@ -40,7 +41,8 @@ find_firmware() {
     /usr/share/qemu-efi-aarch64/QEMU_EFI.fd \
     /usr/share/edk2/aarch64/QEMU_EFI.fd \
     /usr/share/AAVMF/AAVMF_CODE.fd \
-    /usr/share/AAVMF/AAVMF_CODE.ms.fd
+    /usr/share/AAVMF/AAVMF_CODE.ms.fd \
+    /tmp/edk2-fw/usr/share/qemu-efi-aarch64/QEMU_EFI.fd
   do
     if [[ -f "$candidate" ]]; then
       printf '%s\n' "$candidate"
@@ -68,8 +70,26 @@ cat > "${ESP_DIR}/startup.nsh" <<'EOF'
 fs0:\EFI\BOOT\BOOTAA64.EFI
 EOF
 
+for tool in truncate mkfs.vfat mmd mcopy; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "error: $tool was not found." >&2
+    echo "Ubuntu: sudo apt install dosfstools mtools" >&2
+    echo "Arch:   sudo pacman -S dosfstools mtools" >&2
+    exit 1
+  fi
+done
+
+rm -f "$ESP_IMG"
+truncate -s "${ESP_IMAGE_SIZE:-64M}" "$ESP_IMG"
+mkfs.vfat -F 32 "$ESP_IMG" >/dev/null
+mmd -i "$ESP_IMG" ::/EFI ::/EFI/BOOT
+mcopy -i "$ESP_IMG" "$EFI_BIN" ::/EFI/BOOT/BOOTAA64.EFI
+mcopy -i "$ESP_IMG" "$EFI_BIN" ::/hinode.efi
+mcopy -i "$ESP_IMG" "${ESP_DIR}/startup.nsh" ::/startup.nsh
+
 echo "EFI binary: ${EFI_BIN}"
 echo "ESP dir:    ${ESP_DIR}"
+echo "ESP image:  ${ESP_IMG}"
 echo "Firmware:   ${FIRMWARE}"
 echo "QEMU:       ${QEMU}"
 
@@ -91,5 +111,5 @@ exec "$QEMU" \
   -nographic \
   -net none \
   -bios "$FIRMWARE" \
-  -drive "if=none,format=raw,file=fat:rw:${ESP_DIR},id=esp" \
+  -drive "if=none,format=raw,file=${ESP_IMG},id=esp" \
   -device virtio-blk-device,drive=esp

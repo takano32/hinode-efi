@@ -11,7 +11,7 @@ QEMU smoke test.
 
 ```sh
 sudo apt update
-sudo apt install qemu-system-arm qemu-efi-aarch64
+sudo apt install qemu-system-arm qemu-efi-aarch64 dosfstools mtools
 ```
 
 ### Arch Linux
@@ -19,7 +19,7 @@ sudo apt install qemu-system-arm qemu-efi-aarch64
 Install QEMU:
 
 ```sh
-sudo pacman -S qemu-system-aarch64
+sudo pacman -S qemu-system-aarch64 dosfstools mtools
 ```
 
 `edk2-aarch64` is not in the official Arch repositories. The firmware can be
@@ -66,6 +66,8 @@ The script creates a local `esp/` directory and copies the EFI application to:
 ```text
 esp/EFI/BOOT/BOOTAA64.EFI
 ```
+
+It also creates `esp.img`, a raw FAT image passed to QEMU as the boot disk.
 
 ## Smoke test
 
