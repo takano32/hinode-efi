@@ -11,7 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 log = "0.4"
-uefi = { version = "0.37", features = ["alloc", "global_allocator", "logger", "panic_handler"] }
+uefi = { version = "0.39", features = ["alloc", "global_allocator", "logger", "panic_handler"] }
 uefi-raw = "0.14"
 
 [profile.dev]
